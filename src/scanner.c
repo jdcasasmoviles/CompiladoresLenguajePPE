@@ -1,0 +1,107 @@
+#include <stdlib.h>
+#include <strings.h>
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#include "scanner.h"
+#include "parser.h"     // Cabecera generada por Bison
+
+void yyerror(char *mgs){}
+int token(char *lexema) {
+    int tk = -1;
+    
+    if      (strcasecmp(lexema, "INICIOPROGRAMA" ) == 0) tk = TOK_BGPRG;
+    else if (strcasecmp(lexema, "FINPROGRAMA" ) == 0) tk = TOK_ENPRG;
+    else if (strcasecmp(lexema, "R"       ) == 0) tk = TOK_RTYPE;
+    else if (strcasecmp(lexema, "Z"       ) == 0) tk = TOK_ZTYPE;
+    else if (strcasecmp(lexema, "S"       ) == 0) tk = TOK_STYPE;
+    else if (strcasecmp(lexema, "IMPRIMIR"   ) == 0) tk = TOK_PRINT;
+    else if (strcasecmp(lexema, "true"    ) == 0) tk = TOK_BOOLT;
+    else if (strcasecmp(lexema, "false"   ) == 0) tk = TOK_BOOLF;
+    else if (strcasecmp(lexema, "INICIOFUNCION" ) == 0) tk = TOK_BGFUN;
+    else if (strcasecmp(lexema, "FINFUNCION" ) == 0) {
+        tk = TOK_ENFUN;
+    }
+    else if (strcasecmp(lexema, "PARA"  ) == 0) tk = TOK_BGFOR;
+    else if (strcasecmp(lexema, "FINPARA"  ) == 0) tk = TOK_ENFOR;
+    else if (strcasecmp(lexema, "MIENTRAS") == 0) tk = TOK_BGWHI;
+    else if (strcasecmp(lexema, "FINMIENTRAS") == 0) tk = TOK_ENWHI;
+    else if (strcasecmp(lexema, "SI"   ) == 0) tk = TOK_BEGIF;
+    else if (strcasecmp(lexema, "FINSI"   ) == 0) tk = TOK_ENDIF;
+    else if (strcasecmp(lexema, "SISINO"   ) == 0) tk = TOK_ELSIF;
+    else if (strcasecmp(lexema, "SINO"    ) == 0) tk = TOK_ELSEE;
+    else if (strcasecmp(lexema, "in"      ) == 0) tk = TOK_IOINN;
+    else if (strcasecmp(lexema, "out"     ) == 0) tk = TOK_IOOUT;
+    else if (strcasecmp(lexema, "or"      ) == 0) tk = TOK_LOGIO;
+    else if (strcasecmp(lexema, "and"     ) == 0) tk = TOK_LOGIA;
+    else if (strcasecmp(lexema, "not"     ) == 0) tk = TOK_LOGIN;
+    else if (strcasecmp(lexema, "RETORNAR"  ) == 0) tk = TOK_RETUR;
+    else 
+        tk = TOK_IDENT;
+    return tk;
+}
+
+/* ********************************************************************************************** *
+ * FUNC : 
+ *          yylex
+ * DESC :
+ *          Implementación manual del scanner para el lenguaje MILAN. Devuelve el token del 
+ *          lexema. Además se guarda la cadena reconocida en la variable lexema.
+ * ********************************************************************************************** */
+int yylex() {
+    char lexema[256];
+    int  puntof = 0;
+    while(1) {
+        int i = 0;
+        int c = getchar();
+        if (c == ' ' || c == '\t' || c == '\n') continue;
+        else if ( c == '"') {       // Equivalente a (?=\").*(?=\")
+            c = getchar();
+            while (c != '"') {
+                lexema[i++] = c;
+                c = getchar();
+            }
+            lexema[i] = '\0';
+            yylval.sval = strdup(lexema);
+            return TOK_SCONS;
+        } else if (isalpha(c)) {
+            do {
+                lexema[i++] = c;
+                c = getchar();
+            } while(isalnum(c));
+            ungetc(c,stdin);
+            lexema[i] = '\0';
+            yylval.sval = strdup(lexema);
+            return token(lexema);
+        } else if (isdigit(c)) {
+            do {
+                lexema[i++] = c;
+                c = getchar();
+                if (c == '.') {
+                    lexema[i++] = c;
+                    puntof++;
+                    c = getchar();
+                    if (!isdigit(c)) {
+                        return -1;
+                    }
+                }
+            } while(isdigit(c));
+            if (!isalnum(c)) {
+                ungetc(c, stdin);
+                lexema[i] = '\0';
+                if (puntof == 1) {
+                    yylval.sval = strdup(lexema);
+                    return TOK_RCONS;
+                } else if (puntof == 0) {
+                    yylval.sval = strdup(lexema);
+                    return TOK_ZCONS;
+                } else {
+                    return -1;
+                }
+            }
+        } else {
+            return c;
+        }
+    }
+}

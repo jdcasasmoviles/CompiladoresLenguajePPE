@@ -1,0 +1,20 @@
+INICIOPROGRAMA principal
+    Z: a,n;
+    n := 6;
+    a :=otraFuncion(n);
+FINPROGRAMA
+
+INICIOFUNCION otraFuncion(Z:n)
+    Z: i,tmp,x;
+    tmp :=n;
+    MIENTRAS(tmp>0)
+	PARA (i := 0; i < n; i := i + 1)
+	  IMPRIMIR tmp;
+      	  tmp := tmp-i;
+          x:=tmp;
+    	FINPARA
+    FINMIENTRAS
+    x:=x*x;
+     IMPRIMIR x;
+    RETORNAR tmp;
+FINFUNCION

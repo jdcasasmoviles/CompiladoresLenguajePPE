@@ -1,0 +1,14 @@
+INICIOPROGRAMA demo14
+    Z:a,b,c;
+    a := 4;
+    b := 5;
+    c := 6;
+    b := promedio(a, b, c);
+    IMPRIMIR b;
+FINPROGRAMA
+
+INICIOFUNCION promedio(Z:a, Z:b, Z:c)
+    Z:d;
+    d := (a+b+c)/3;
+    RETORNAR d;
+FINFUNCION

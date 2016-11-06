@@ -1,0 +1,17 @@
+INICIOPROGRAMA principal
+    Z:a,b;
+    a := 3;
+    b := 1;
+    SI (a > b)
+        b := 7;
+    SISINO (a < b)
+        b := 0;
+    SINO
+        SI (a == b)
+            b := 5;
+        SINO
+            b := 8;
+        FINSI
+    FINSI
+	IMPRIMIR b;
+FINPROGRAMA

@@ -1,0 +1,196 @@
+%{
+/* Zona de includes y otras jaladas */
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "scanner.h"
+#include "parfuns.h"
+
+void yyerror(char *mgs);
+
+char tipo;
+%}
+
+/* Tipos para yylval */
+%union {
+     char *sval;
+     int   zval;
+     float rval;
+}
+
+/* Zona de declaracion de TOKENS */
+%token TOK_BGPRG TOK_ENPRG
+%token <sval> TOK_IDENT TOK_RTYPE TOK_ZTYPE TOK_STYPE TOK_PRINT
+%token <sval> TOK_SCONS TOK_ZCONS TOK_RCONS TOK_BOOLT TOK_BOOLF TOK_BOOLN
+%token <sval> TOK_BGFUN TOK_ENFUN 
+%token <sval> TOK_BGFOR TOK_ENFOR TOK_BGWHI TOK_ENWHI TOK_BEGIF TOK_ENDIF TOK_ELSIF TOK_ELSEE
+%token <sval> TOK_IOINN TOK_IOOUT TOK_RETUR
+%token <sval> TOK_LOGIO TOK_LOGIA TOK_LOGIN
+
+%type <sval> expresion operacion asignacion factor termino numero tipo
+
+%%
+S
+    : programa
+    ;
+
+programa
+    : /* Epsilon */
+    | TOK_BGPRG TOK_IDENT { programa($2); } bloque TOK_ENPRG { endprog($2); } definicion_funciones 
+    ;
+
+bloque
+    : /* Epsilon */
+    | instruccion bloque
+    ;
+
+instruccion
+    : ';'
+    | inicio_variables ';'
+    | asignacion ';'
+    | llamada_funcion ';'
+    | estructura_for
+    | estructura_while
+    | estructura_if
+    | imprimir ';'
+    ;
+
+inicio_variables
+    : tipo { tipo = ($1)[0]; } ':' lista_definiciones 
+    ;
+
+tipo
+    : TOK_ZTYPE
+    | TOK_RTYPE
+    | TOK_STYPE
+    ;
+
+lista_definiciones
+    : TOK_IDENT { declararvar($1, tipo); }
+    | TOK_IDENT { declararvar($1, tipo); }',' lista_definiciones
+    ;
+
+asignacion
+    : TOK_IDENT ':''=' expresion { asignar($1, $4); }
+    ;
+
+imprimir
+    : TOK_PRINT expresion { agregarcod("print", $2, "", ""); }
+    ;
+
+expresion
+    : TOK_SCONS 
+    | operacion 
+    | operacion '<'    operacion { $$ = comparacion("menor", $1, $3); }
+    | operacion '>'    operacion { $$ = comparacion("mayor", $1, $3); }
+    | operacion '<''=' operacion { $$ = comparacion("menig", $1, $4); }
+    | operacion '>''=' operacion { $$ = comparacion("mayig", $1, $4); }
+    | operacion '=''=' operacion { $$ = comparacion("igual", $1, $4); }
+    | TOK_BOOLN operacion { $$ = negar($2); }
+    | asignacion
+    | llamada_funcion { $$ = ret(); }
+    ;
+
+operacion
+    : factor
+    | operacion '+' factor {$$ = operacion("sumar", $1, $3); }
+    | operacion '-' factor {$$ = operacion("resta", $1, $3); }
+    ;
+
+factor
+    : termino
+    | factor '*' termino {$$ = operacion("multi", $1, $3); }
+    | factor '/' termino {$$ = operacion("divid", $1, $3); }
+    ;
+
+termino
+    : TOK_IDENT
+    | numero
+    | '(' operacion ')' {$$ = $2;}
+    ;
+
+numero
+    : TOK_RCONS { agregarsim($1, 'R', "", 0, atof($1)); }
+    | TOK_ZCONS { agregarsim($1, 'Z', "", atoi($1), 0); }
+    ;
+
+definicion_funciones
+    : 
+    | funcion_definicion definicion_funciones
+    ;
+
+funcion_definicion
+    : TOK_BGFUN TOK_IDENT '(' ')' { newfunc($2); } bloque retorno TOK_ENFUN { agregarcod("endfx", $2, "", ""); }
+    | TOK_BGFUN TOK_IDENT '(' parametros_lista { newfunc($2); } ')' bloque retorno TOK_ENFUN { agregarcod("endfx", $2, "", ""); }
+    ;
+
+retorno
+    : /* Epsilon */
+    | TOK_RETUR TOK_IDENT ';' { agregarcod("return", $2, "", ""); }
+    ;
+    
+parametros_lista
+    : definicion_parametro
+    | definicion_parametro ',' parametros_lista
+    ;
+
+/*definicion_parametro
+    : io ':' tipo ':' TOK_IDENT
+    | io ':' tipo ':' TOK_IDENT ':''=' expresion
+    ;
+*/
+
+definicion_parametro
+    : tipo ':' TOK_IDENT
+    ;
+
+/*io
+    : TOK_IOINN {inout[iodx++] = 1;}
+    | TOK_IOOUT {inout[iodx++] = 0;}
+    ;
+*/
+
+llamada_funcion
+    : TOK_IDENT '(' { resetparams(); } ')' { exefunc($1); }
+    | TOK_IDENT '(' { resetparams(); } variables_lista ')' { exefunc($1); }
+    ;
+
+variables_lista
+    : TOK_IDENT { agregarparam($1); }
+    | numero { agregarparam($1); }
+    | TOK_IDENT { agregarparam($1); } ',' variables_lista
+    | numero { agregarparam($1); } ',' variables_lista
+    ;
+
+estructura_for
+    : TOK_BGFOR '(' inicializacion_for { begfor(); } ';' expresion { jmp2endfor($6); } ';' asignacion ')' { fixbfor(); } bloque { endfor(); } TOK_ENFOR
+    ;
+
+inicializacion_for
+    : lista_inicializacion
+    | lista_inicializacion ',' inicializacion_for
+    ;
+
+lista_inicializacion
+    : TOK_IDENT ':''=' expresion { asignar($1, $4); }
+    ; 
+
+estructura_while
+    : TOK_BGWHI '(' expresion ')' bloque TOK_ENWHI
+    ;
+
+estructura_if
+    : encabezado_if elsif_bloques TOK_ENDIF { elselbl(); endif(); }
+    | encabezado_if elsif_bloques TOK_ELSEE { elselbl(); } bloque TOK_ENDIF { endif(); }
+    ;
+
+encabezado_if
+    : TOK_BEGIF { begif(); } '(' expresion ')' { jmp2else($4); } bloque { jmp2endif(); }
+    ;
+elsif_bloques
+    : 
+    | TOK_ELSIF { elselbl(); } '(' expresion ')' {jmp2else($4);} bloque { jmp2endif(); } elsif_bloques
+    ;
+%%

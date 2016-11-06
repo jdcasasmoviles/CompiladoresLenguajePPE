@@ -1,0 +1,9 @@
+INICIOPROGRAMA demo11
+    Z:a;
+    a:= 3;
+    imprimirPantalla(a);
+FINPROGRAMA
+
+INICIOFUNCION imprimirPantalla(Z:a)
+    IMPRIMIR a;
+FINFUNCION

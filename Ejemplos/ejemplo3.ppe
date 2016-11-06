@@ -1,0 +1,15 @@
+INICIOPROGRAMA principal
+    Z: a,n;
+    n := 6;
+    a := factorial(n);
+    IMPRIMIR a;
+FINPROGRAMA
+
+INICIOFUNCION factorial(Z:n)
+    Z: i,tmp;
+    tmp := 1;
+    PARA (i := 2; i < n; i := i + 1)
+        tmp := tmp*i;
+    FINPARA
+    RETORNAR tmp;
+FINFUNCION
